@@ -1,0 +1,28 @@
+arp -a
+
+ssh newuser@192.168.0.100   //ssh user_name@ip_Address
+
+yes
+
+password 
+
+newuser@raspberrypi:~ $ sudo raspi-config
+
+interface option
+
+vnc
+
+then go to vnc media player
+
+ add ip address and press enter 
+
+
+after opening os
+
+1.  cat /etc/os-release
+2.  sudo apt-get update
+3.  python3 -m pip install --user --updragepip
+4.  python3 -m pip install --user virtualenu
+5.  python3 -m venu ~/tflite
+6.  source ~/tflite/bin/activity
+7.  get clone LINK

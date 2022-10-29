@@ -1,0 +1,138 @@
+import lcddriver
+import RPi.GPIO as GPIO           # import RPi.GPIO module
+import time
+
+
+GPIO.setmode(GPIO.BCM)     # set up BCM GPIO numbering  
+GPIO.setwarnings(False)
+Key=18
+LED=17
+lcd = lcddriver.lcd()
+lcd.lcd_clear()
+line=1
+pos=5
+lcd.lcd_string("Loading Model.....",line)
+
+from PyQt5 import QtWidgets, uic
+from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QFileDialog
+from PyQt5.QtGui import QIcon
+# 
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtGui import QImage
+# 
+#import imutils
+import sys
+from PyQt5.QtWidgets import QWidget, QLabel, QApplication
+from PyQt5.QtCore import QThread, Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QImage, QPixmap
+#import cv2
+print('done 1')
+
+# import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model
+# from tensorflow.keras.preprocessing.image import img_to_array
+from PIL import Image
+from tensorflow.keras.models import model_from_json
+import numpy as np
+# import matplotlib.pyplot as plt
+import os
+from PIL import Image
+from keras.preprocessing import image
+from keras.preprocessing.image import img_to_array
+import csv
+# import picamera
+# 
+# with picamera.PiCamera() as camera:
+#     camera.start_preview()
+
+json_file = open('model.json', 'r')
+loaded_model_json = json_file.read()
+json_file.close()
+loaded_model = model_from_json(loaded_model_json)
+# load weights into new model
+loaded_model.load_weights("model.h5")
+print("Loaded model from disk")
+
+
+file = open("Lables.csv", "r")
+csv_reader = csv.reader(file)
+label = []
+
+for row in csv_reader:
+    # row=row.replace
+    row=str(row)
+ 
+    row=row.replace('[', '')
+    row=row.replace(']', '')
+    row=row.replace("'", '')
+   
+    label.append(row)
+print(label)
+print('------------')
+
+
+
+lcd.lcd_string("Plant Disease Dr.",line)
+GPIO.setup(Key,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(LED, GPIO.OUT) # set a port/pin as an output  
+lcd.lcd_string("  No Leaf  ",2,1)
+GPIO.output(LED, 0)       # set port/pin value to 0/GPIO.LOW/False
+
+class Ui(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(Ui, self).__init__()
+        #uic.loadUi('Button_Pred.ui', self)
+        uic.loadUi('imageOnly_RPI.ui',self)
+        self.ImageButton.clicked.connect(self.loadImage)
+        self.OutputLabel.setText(" ")
+        self.show()
+    
+    def loadImage(self):
+        global filename
+        self.OutputLabel.setText(" ")
+        filename, _ = QFileDialog.getOpenFileName(self)
+        print('filename ', filename)
+        
+        #org_image = image.load_img(filename, target_size = (480, 360))
+        #imgpath='a.JPG'
+        test_image = image.load_img(filename, target_size = (128, 128))
+        
+        self.filename=filename
+        self.setPhoto(self.filename)
+        
+        lcd.lcd_string("Detecting      ",2,1)
+        
+        test_image = image.img_to_array(test_image)
+        test_image = np.expand_dims(test_image, axis = 0)
+        result = loaded_model.predict(test_image)
+        OutPutClass=label[result.argmax()]
+        print(OutPutClass)
+        self.OutputLabel.setText(OutPutClass)
+        
+        self.update()
+        time.sleep(1)
+        self.update()
+        
+        
+        if 'Tomato_healthy'==OutPutClass:
+            print('disease No found')
+                            #012345678912345
+            lcd.lcd_string('No Disease      ',2,1)
+        else:
+            lcd.lcd_string(OutPutClass,2,1)
+            time.sleep(3)
+            lcd.lcd_string('Disease Found   ',2,1)
+            GPIO.output(LED, 1)
+            time.sleep(5)
+            GPIO.output(LED, 0)
+            
+    def setPhoto(self, filename):
+     
+        self.pixmap = QPixmap(filename)
+        self.ImageToShow.setPixmap(self.pixmap)
+        
+
+app = QtWidgets.QApplication(sys.argv)
+window = Ui()
+app.exec_()

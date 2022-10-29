@@ -1,0 +1,16 @@
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+
+update_config=1
+
+country=IN
+
+network={
+
+    ssid="NAIR HOUSE_5G"
+
+    psk="qwerty123456"
+
+    scan_ssid=1
+
+}
+

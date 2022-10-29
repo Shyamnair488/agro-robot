@@ -1,0 +1,116 @@
+import lcddriver
+import RPi.GPIO as GPIO           # import RPi.GPIO module
+import time
+import cv2
+
+
+
+GPIO.setmode(GPIO.BCM)     # set up BCM GPIO numbering  
+
+GPIO.setwarnings(False)
+Key=18
+LED=17
+
+
+
+lcd = lcddriver.lcd()
+lcd.lcd_clear()
+line=1
+pos=5
+
+
+lcd.lcd_string("Loading Model.....",line)
+
+from tensorflow.keras.models import model_from_json
+import csv
+import numpy as np
+import os
+from PIL import Image
+
+from keras.preprocessing import image
+
+json_file = open('model.json', 'r')
+loaded_model_json = json_file.read()
+json_file.close()
+loaded_model = model_from_json(loaded_model_json)
+# load weights into new model
+loaded_model.load_weights("model.h5")
+print("Loaded model from disk")
+
+
+file = open("Lables.csv", "r")
+csv_reader = csv.reader(file)
+label = []
+
+for row in csv_reader:
+    # row=row.replace
+    row=str(row)
+ 
+    row=row.replace('[', '')
+    row=row.replace(']', '')
+    row=row.replace("'", '')
+   
+    label.append(row)
+print(label)
+print('------------')
+
+lcd.lcd_string("Plant Disease Dr.",line)
+GPIO.setup(Key,GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(LED, GPIO.OUT) # set a port/pin as an output  
+lcd.lcd_string("  No Leaf  ",2,1)
+GPIO.output(LED, 0)       # set port/pin value to 0/GPIO.LOW/False  
+
+cap = cv2.VideoCapture(0)
+while True:
+    _, frame = cap.read()
+    height, width, channels = frame.shape
+    #print('height : ',height)
+    #print('width : ',width)
+    if GPIO.input(Key) == 1:
+        
+        
+                       #012345678912345
+        lcd.lcd_string("Detecting      ",2,1)
+        print('button detected')
+        #Convert img to RGB
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        test_image = cv2.resize(rgb, (128 , 128 ))
+        #test_image = image.load_img(rgb, target_size = (56, 56))
+
+        test_image = image.img_to_array(test_image)
+        test_image = np.expand_dims(test_image, axis = 0)
+        result = loaded_model.predict(test_image)
+        OutPutClass=label[result.argmax()]
+
+
+        accu=max(max(result))
+        print(OutPutClass)
+        
+        
+        if 'Tomato_healthy'==OutPutClass:
+            print('disease No found')
+                            #012345678912345
+            lcd.lcd_string('No Disease      ',2,1)
+        else:
+            lcd.lcd_string(OutPutClass,2,1)
+            time.sleep(3)
+            lcd.lcd_string('Disease Found   ',2,1)
+            GPIO.output(LED, 1)
+            time.sleep(5)
+            GPIO.output(LED, 0)
+            
+        
+            
+        #print('accu ',accu )
+        #if accu > 0.5:
+            #print(OutPutClass)
+            
+            #---------------------
+        
+        time.sleep(1)
+    cv2.imshow("Image", frame)
+    key = cv2.waitKey(1)
+    if key == 27: #esc
+        break
+
+cap.release()
